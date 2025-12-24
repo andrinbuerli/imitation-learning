@@ -135,12 +135,7 @@ class WindowedTrajectoryDataset(Dataset):
             obs_pad = torch.zeros(pad_len, self.obs_dim, dtype=torch.float32)
             obs = torch.cat([obs, obs_pad], dim=0)
 
-            if self.action_mode == "continuous":
-                act_pad = torch.zeros(pad_len, self.action_dim, dtype=torch.float32)
-                act = torch.cat([act, act_pad], dim=0)
-            else:
-                # For discrete, pad with -100 so CE can ignore those positions
-                act_pad = torch.full((pad_len,), -100, dtype=torch.int64)
-                act = torch.cat([act, act_pad], dim=0)
+            act_pad = torch.zeros(pad_len, self.action_dim, dtype=torch.float32)
+            act = torch.cat([act, act_pad], dim=0)
 
         return {"obs": obs, "acts": act, "mask": attn_mask}

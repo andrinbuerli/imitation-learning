@@ -22,7 +22,7 @@ class TransformerBC(nn.Module):
         num_actions: Optional[int] = None,
     ):
         super().__init__()
-        assert action_mode in ("continuous", "discrete")
+        assert action_mode in ("continuous", "probabilistic")
         self.obs_dim = obs_dim
         self.action_mode = action_mode
         self.action_dim = action_dim
@@ -48,14 +48,21 @@ class TransformerBC(nn.Module):
         
         self.causal_mask = None
 
-        if action_mode == "continuous":
-            if action_dim is None:
-                raise ValueError("action_dim must be set for continuous mode")
-            self.head = nn.Linear(d_model, action_dim)
-        else:
-            if num_actions is None:
-                raise ValueError("num_actions must be set for discrete mode")
-            self.head = nn.Linear(d_model, num_actions)
+        self.distribution = DiagGaussianDistribution(action_dim)
+        self.mean_layer, self.log_std = self.distribution.proba_distribution_net(d_model)
+        
+    def log_prob(self, actions: torch.Tensor, means: torch.Tensor) -> torch.Tensor:
+        """
+        actions: [B, (L,), action_dim]
+        means:   [B, (L,), action_dim]
+        returns:
+          log_prob: [B, (L,)]
+        """
+        orig_shape = actions.shape
+        dist = self.distribution.proba_distribution(means.reshape(-1, self.action_dim),self.log_std)
+        log_prob = dist.log_prob(actions.reshape(-1, self.action_dim))
+        
+        return log_prob.reshape(orig_shape[:-1])
 
     def forward(self, obs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
@@ -82,7 +89,7 @@ class TransformerBC(nn.Module):
         # our mask is True for valid => pad_mask = ~mask
         pad_mask = ~mask
         x = self.encoder(x, src_key_padding_mask=pad_mask, mask=self.causal_mask, is_causal=True)
-        out = self.head(x)
+        out = self.mean_layer(x)
         return out
 
 
