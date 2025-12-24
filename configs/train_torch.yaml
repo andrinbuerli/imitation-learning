@@ -1,0 +1,51 @@
+defaults:
+  - _self_
+
+data:
+  file: data/clean/filtered_trajectories.json
+  drop_last_obs: true
+  obs_dim: null
+  action_dim: null
+
+train:
+  seq_len: 1
+  action_mode: probabilistic
+  num_actions: null
+  batch_size: 128
+  epochs: 100
+  val_frac: 0.01
+  seed: 0
+  num_workers: 4
+  stride: 1
+  drop_last_short: false
+  checkpoint_dir: output/checkpoints
+  export_onnx_path: null
+  lr: 1e-4
+  weight_decay: 1e-3
+  grad_clip: 1.0
+
+# model:
+#   name: transformer
+#   d_model: 64
+#   nhead: 8
+#   num_layers: 4
+#   dim_feedforward: 256
+#   dropout: 0.0
+
+model:
+  name: mlp
+  hidden_dim: 64
+  n_layers: 2
+  dropout: 0.0
+
+eval:
+  env_path: Starter/Godot/ILTutorialEnv.x86_64
+  obs_key: obs
+  episodes: 10
+  speedup: 20
+  viz: false
+  max_steps: 700
+
+wandb:
+  project: imitation-learning
+  entity: andrinburli

@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+imitation-learning/
+lightning_logs/
+wandb/
+output/
+outputs/
+*.egg-info
+
+# Virtual environments
+.venv
+logs*/
+Starter/
+data/clean/

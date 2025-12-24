@@ -1,0 +1,19 @@
+defaults:
+  - _self_
+
+model:
+  checkpoint_path: null # output/checkpoints/last.ckpt
+  onnx_path: model_bc.onnx
+
+env:
+  env_path: Starter/Godot/ILTutorialEnv.x86_64
+  obs_key: obs
+  seed: 0
+  n_parallel: 1
+  speedup: 1
+  viz: false
+
+eval:
+  n_episodes: 10
+  device: cpu
+  max_steps: null
