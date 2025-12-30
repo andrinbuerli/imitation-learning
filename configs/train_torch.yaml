@@ -9,16 +9,16 @@ data:
 
 train:
   seq_len: 1
-  action_mode: probabilistic
+  action_mode: explicit
   num_actions: null
-  batch_size: 128
+  batch_size: 32
   epochs: 100
   val_frac: 0.01
   seed: 0
   num_workers: 4
   stride: 1
   drop_last_short: false
-  checkpoint_dir: output/checkpoints
+  checkpoint_dir: checkpoints
   export_onnx_path: null
   lr: 1e-4
   weight_decay: 1e-3
@@ -26,22 +26,24 @@ train:
 
 # model:
 #   name: transformer
-#   d_model: 64
-#   nhead: 8
-#   num_layers: 4
-#   dim_feedforward: 256
-#   dropout: 0.0
+#   d_model: 96
+#   nhead: 3
+#   num_layers: 3
+#   dim_feedforward: 384
+#   dropout: 0.1
+#   token_dropout: 0.0
+
 
 model:
   name: mlp
-  hidden_dim: 64
-  n_layers: 2
-  dropout: 0.0
+  hidden_dim: 256
+  n_layers: 3
+  dropout: 0.1
 
 eval:
   env_path: Starter/Godot/ILTutorialEnv.x86_64
   obs_key: obs
-  episodes: 10
+  episodes: 16
   speedup: 20
   viz: false
   max_steps: 700

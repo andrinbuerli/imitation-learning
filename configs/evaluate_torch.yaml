@@ -1,19 +1,27 @@
 defaults:
   - _self_
 
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
+
 model:
-  checkpoint_path: null # output/checkpoints/last.ckpt
-  onnx_path: model_bc.onnx
+  #checkpoint_path: /home/andrinbuerli/Documents/workspace/deep-rl-course/outputs/2025-12-30/17-38-36/checkpoints/last.ckpt
+  checkpoint_path: /home/andrinbuerli/Documents/workspace/deep-rl-course/outputs/2025-12-30/21-35-44/checkpoints/last.ckpt
+  onnx_path: null #data/models/model_gail.onnx
 
 env:
   env_path: Starter/Godot/ILTutorialEnv.x86_64
   obs_key: obs
   seed: 0
   n_parallel: 1
-  speedup: 1
+  speedup: 20
   viz: false
 
 eval:
-  n_episodes: 10
+  n_episodes: 50
   device: cpu
   max_steps: null
