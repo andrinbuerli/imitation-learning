@@ -59,10 +59,11 @@ GAIL performs best and is perfectly stable; transformer-based EBC outperforms ML
 | **Transformer EBC**                 | 2.700+-0.755                 |
 | **Transformer + token masking EBC** | 2.820+-0.623                   |
 
-
 ### Video renders
-TBD
-MLP EBC vs Transformer EBC 
+
+| **MLP EBC**                              |  **Transformer + token masking EBC** |
+| ----------------------------------- | ------------------------------- |
+|   ![mlp](data/videos/mlp.gif)                        |      ![mlp](data/videos/transformer.gif)             |
 
 
 
