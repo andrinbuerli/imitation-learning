@@ -50,14 +50,14 @@ Behavior:
 * rotation affects only **Y-axis** (turning left/right)
 
 ## Results
-GAIL performs best and is perfectly stable; transformer-based EBC outperforms MLP EBC, and **token masking further improves performance and stability**.
+GAIL performs best and is perfectly stable; transformer-based EBC outperforms MLP EBC, and token masking further improves performance and stability.
 
 | Method                              | Avg. cumulative reward (50 eps) |
 | ----------------------------------- | ------------------------------- |
 | **GAIL**                            | **3.000 ± 0.000**               |
-| **MLP EBC**                         | 1.080 ± 1.440                   |
-| **Transformer EBC**                 | 2.120 ± 1.351                   |
-| **Transformer + token masking EBC** | 2.540 ± 1.062                   |
+| **MLP EBC**                         | 0.520+-0.640                 |
+| **Transformer EBC**                 | 2.700+-0.755                 |
+| **Transformer + token masking EBC** | 2.820+-0.623                   |
 
 
 ### Video renders
