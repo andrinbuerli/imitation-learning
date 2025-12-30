@@ -45,7 +45,7 @@ class WindowedTrajectoryDataset(Dataset):
         trajectories: Sequence[Union[Trajectory, Tuple[Sequence, Sequence]]],
         seq_len: int,
         obs_dim: int,
-        action_mode: str = "continuous",  # "continuous" or "probabilistic"
+        action_mode: str = "explicit",  # "explicit" or "explicit"
         action_dim: Optional[int] = None,  # for continuous
         num_actions: Optional[int] = None,  # for probabilistic
         stride: int = 1,
@@ -53,7 +53,7 @@ class WindowedTrajectoryDataset(Dataset):
         seed: int = 0,
     ):
         super().__init__()
-        assert action_mode in ("continuous", "probabilistic")
+        assert action_mode in ("explicit", "implicit")
         self.action_mode = action_mode
         self.seq_len = int(seq_len)
         self.obs_dim = int(obs_dim)

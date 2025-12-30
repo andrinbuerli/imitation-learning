@@ -17,7 +17,7 @@ class BCTransformerLit(pl.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-
+        self.cfg = cfg
         if cfg.model.name == "transformer":
             net = TransformerBC(
                 obs_dim=cfg.data.obs_dim,
@@ -30,6 +30,7 @@ class BCTransformerLit(pl.LightningModule):
                 action_mode=cfg.train.action_mode,
                 action_dim=cfg.data.action_dim,
                 num_actions=cfg.train.num_actions,
+                token_dropout=cfg.model.token_dropout,
             )
         elif cfg.model.name == "mlp":
             net = MLPBC(
@@ -58,21 +59,35 @@ class BCTransformerLit(pl.LightningModule):
         acts = batch["acts"]
         mask = batch["mask"]
 
-        pred = self.net(obs, mask)
-
-        if self.net.action_mode == "continuous":
-            # mask: [B,L] -> [B,L,1]
-            m = mask.unsqueeze(-1).float()
-            mse = (F.mse_loss(pred, acts, reduction="none") * m).sum() / (m.sum().clamp_min(1.0))
-            loss = mse
-            logs = {f"{stage}/loss": loss, f"{stage}/mse": mse}
-        else:
+        if self.net.action_mode == "explicit":
+            pred = self.net(obs, mask)
             log_prob = self.net.log_prob(acts, pred)
             loss = - (log_prob * mask).sum() / mask.sum().clamp_min(1.0)
             prob_acts = (log_prob.exp() * mask).sum() / mask.sum().clamp_min(1.0)
             
-            
             logs = {f"{stage}/loss": loss, f"{stage}/prob_acts": prob_acts}
+        elif self.net.action_mode == "implicit":
+            # energy-based model loss
+            batch_size, seq_len = acts.shape[:2]
+            
+            eps = torch.randn_like(acts) * self.cfg.train.ebm_noise_std
+            acts_tilde = acts + eps
+            
+            # concat obs and acts_tilde
+            inpt = torch.cat([obs, acts_tilde], dim=-1)
+            scores = self.net(inpt, mask).squeeze(-1)  # [B, L]
+            
+            grad_scores = torch.autograd.grad(
+                scores.sum(), acts_tilde, create_graph=True
+            )[0]  # [B, L, action_dim]
+            
+            
+            denoising_score_match = ((grad_scores + eps / (self.cfg.train.ebm_noise_std ** 2)) ** 2).sum(dim=-1)  # [B, L]
+            
+            loss = (denoising_score_match * mask).sum() / mask.sum().clamp_min(1.0)
+            
+            logs = {f"{stage}/loss": loss, f"{stage}/ebm_std": self.cfg.train.ebm_noise_std}
+            
         return loss, logs
 
     def configure_optimizers(self):

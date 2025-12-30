@@ -8,7 +8,7 @@ from omegaconf import DictConfig
 from hydra.utils import to_absolute_path
 
 from godot_rl.wrappers.sbg_single_obs_wrapper import SBGSingleObsEnv
-
+from tqdm import tqdm
 from train_torch import BCTransformerLit
 try:
     import onnxruntime as ort
@@ -102,7 +102,7 @@ def main(cfg: DictConfig) -> None:
         seq_len = int(model.hparams.cfg.train.seq_len)
         obs_dim = int(model.hparams.cfg.data.obs_dim)
 
-        print(f"Model: {model.net}")
+        print(f"Model: {model.net}, {sum(p.numel() for p in model.net.parameters() if p.requires_grad)} parameters")
     else:
         onnx_path = to_absolute_path(cfg.model.onnx_path)
         policy = OnnxPolicy(onnx_path)
@@ -111,13 +111,14 @@ def main(cfg: DictConfig) -> None:
         env_path=to_absolute_path(cfg.env.env_path) if cfg.env.env_path else None,
         show_window=cfg.env.viz,
         seed=cfg.env.seed,
-        n_parallel=cfg.env.n_parallel,
+        n_parallel=1,
         speedup=cfg.env.speedup,
         obs_key=cfg.env.obs_key,
     )
 
     episode_rewards = []
     n_envs = 16
+    pbar = tqdm(total=cfg.eval.n_episodes, desc="Evaluating")
     while len(episode_rewards) < cfg.eval.n_episodes:
         raw_obs = _reset_env(env)
         obs = _extract_obs(raw_obs, cfg.env.obs_key)
@@ -156,8 +157,12 @@ def main(cfg: DictConfig) -> None:
                 for idx in done_indices:
                     episode_rewards.append(total_reward[idx])
                     total_reward[idx] = 0.0
+                    pbar.update(1)
                 if len(episode_rewards) >= cfg.eval.n_episodes:
                     break
+                
+                curr_mean = float(np.mean(episode_rewards))
+                pbar.set_description(f"Evaluating (mean reward: {curr_mean:.3f})")
 
             steps += 1
             if cfg.eval.max_steps is not None and steps >= cfg.eval.max_steps:
@@ -165,7 +170,7 @@ def main(cfg: DictConfig) -> None:
 
     env.close()
     mean_reward = float(np.mean(episode_rewards)) if episode_rewards else float("nan")
-    print(f"Mean reward over {len(episode_rewards)} episodes: {mean_reward:.3f}")
+    print(f"Mean reward over {len(episode_rewards)} episodes: {mean_reward:.3f}+-{np.std(episode_rewards):.3f}")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ except ImportError:
 from pytorch_lightning.callbacks import ModelCheckpoint
 import hydra
 from omegaconf import DictConfig, OmegaConf
-
+from hydra.core.hydra_config import HydraConfig
 import json
 from pathlib import Path
     
@@ -117,8 +117,9 @@ def main(cfg: DictConfig):
     )
     wandb_logger.experiment.config.update(OmegaConf.to_container(cfg, resolve=True), allow_val_change=True)
 
-    checkpoint_dir = cfg.train.checkpoint_dir or "output/checkpoints"
-    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_dir = cfg.train.checkpoint_dir or "checkpoints"
+    # checkpoint dir should be in hydra folder
+    checkpoint_dir = os.path.join(HydraConfig.get().runtime.output_dir, checkpoint_dir)
     checkpoint_cb = ModelCheckpoint(
         dirpath=checkpoint_dir,
         filename="last",

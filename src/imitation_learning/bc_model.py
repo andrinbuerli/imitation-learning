@@ -17,12 +17,13 @@ class TransformerBC(nn.Module):
         dim_feedforward: int = 1024,
         dropout: float = 0.1,
         max_len: int = 512,
-        action_mode: str = "continuous",
+        action_mode: str = "explicit",
         action_dim: Optional[int] = None,
         num_actions: Optional[int] = None,
+        token_dropout: float = 0.1,
     ):
         super().__init__()
-        assert action_mode in ("continuous", "probabilistic")
+        assert action_mode in ("explicit", "implicit", "probabilistic")
         self.obs_dim = obs_dim
         self.action_mode = action_mode
         self.action_dim = action_dim
@@ -50,6 +51,7 @@ class TransformerBC(nn.Module):
 
         self.distribution = DiagGaussianDistribution(action_dim)
         self.mean_layer, self.log_std = self.distribution.proba_distribution_net(d_model)
+        self.token_dropout = token_dropout
         
     def log_prob(self, actions: torch.Tensor, means: torch.Tensor) -> torch.Tensor:
         """
@@ -84,6 +86,12 @@ class TransformerBC(nn.Module):
             )
         pos = torch.arange(L, device=obs.device).unsqueeze(0).expand(B, L)
         x = x + self.pos_emb(pos)
+        
+        if self.training and self.token_dropout > 0.0:
+            drop_factor_this_batch = torch.rand(1).item() * self.token_dropout
+            drop_mask = (torch.rand(B, L, device=obs.device) < drop_factor_this_batch) & mask
+            x = x.masked_fill(drop_mask.unsqueeze(-1), 0.0)
+            mask = mask & ~drop_mask
 
         # Transformer uses src_key_padding_mask where True means "PAD to ignore".
         # our mask is True for valid => pad_mask = ~mask
@@ -104,20 +112,23 @@ class MLPBC(nn.Module):
         hidden_dim: int = 256,
         n_layers: int = 2,
         dropout: float = 0.1,
-        action_mode: str = "continuous",
+        action_mode: str = "explicit",
         action_dim: Optional[int] = None,
         num_actions: Optional[int] = None,
         activation: nn.Module = nn.ReLU,
     ):
         super().__init__()
-        assert action_mode in ("continuous", "probabilistic")
+        assert action_mode in ("explicit", "implicit")
         self.action_mode = action_mode
         self.action_dim = action_dim
         self.num_actions = num_actions
         self.obs_dim = obs_dim
 
         layers = []
-        in_dim = obs_dim
+        if action_mode == "explicit":
+            in_dim = obs_dim
+        elif action_mode == "implicit":
+            in_dim = obs_dim + num_actions
         for _ in range(n_layers):
             layers.append(nn.Linear(in_dim, hidden_dim))
             layers.append(activation())
@@ -129,8 +140,13 @@ class MLPBC(nn.Module):
 
         self.net = nn.Sequential(*layers)
         
-        self.distribution = DiagGaussianDistribution(action_dim)
-        self.mean_layer, self.log_std = self.distribution.proba_distribution_net(hidden_dim)
+        if action_mode == "explicit":
+            self.distribution = DiagGaussianDistribution(action_dim)
+            mean_layer, self.log_std = self.distribution.proba_distribution_net(hidden_dim)
+            self.final_layer = mean_layer
+        elif action_mode == "implicit" and num_actions is not None:
+            self.final_layer = nn.Linear(hidden_dim, 1) # predict energy score or tuple (o, a)
+            
         
     def log_prob(self, actions: torch.Tensor, means: torch.Tensor) -> torch.Tensor:
         """
@@ -139,6 +155,7 @@ class MLPBC(nn.Module):
         returns:
           log_prob: [B, (L,)]
         """
+        assert self.action_mode == "explicit", "log_prob is only defined for explicit action mode"
         orig_shape = actions.shape
         dist = self.distribution.proba_distribution(means.reshape(-1, self.action_dim),self.log_std)
         log_prob = dist.log_prob(actions.reshape(-1, self.action_dim))
@@ -167,6 +184,6 @@ class MLPBC(nn.Module):
         else:
             raise ValueError(f"obs must be 2D or 3D, got shape {obs.shape}")
 
-        mean = self.mean_layer(x)
+        mean = self.final_layer(x)
 
         return mean

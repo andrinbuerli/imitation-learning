@@ -95,7 +95,7 @@ class EvalCallback(pl.Callback):
         if trainer.current_epoch % 10 != 0:
             return
 
-        seq_len = int(pl_module.net.seq_len if hasattr(pl_module.net, "seq_len") else 1)
+        seq_len = int(pl_module.cfg.train.seq_len)
         obs_dim = int(pl_module.net.obs_dim)
         action_mode = pl_module.net.action_mode
 
@@ -103,6 +103,8 @@ class EvalCallback(pl.Callback):
         pl_module.eval()
         episode_rewards = []
         with torch.no_grad():
+
+            pbar = tqdm(total=self.n_episodes)
             while len(episode_rewards) < self.n_episodes:
                 raw_obs = self._reset_env()
                 obs = self._extract_obs(raw_obs)
@@ -116,8 +118,6 @@ class EvalCallback(pl.Callback):
                 done = np.array(False).repeat(n_envs)
                 total_reward = np.array(0.0).repeat(n_envs)
                 steps = 0
-
-                pbar = tqdm(total=self.max_steps if self.max_steps is not None else None)
 
                 while not done.all():
                     obs_t, mask_t, valid_len = self._build_window(
@@ -143,11 +143,11 @@ class EvalCallback(pl.Callback):
                         for idx in done_indices:
                             episode_rewards.append(total_reward[idx])
                             total_reward[idx] = 0.0
+                            pbar.update(1)
                         if len(episode_rewards) >= self.n_episodes:
                             break
 
                     steps += 1
-                    pbar.update(1)
                     if self.max_steps is not None and steps >= self.max_steps:
                         break
         pl_module.train()
