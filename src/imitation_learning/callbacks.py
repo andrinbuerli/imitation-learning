@@ -124,7 +124,6 @@ class EvalCallback(pl.Callback):
                         obs_history,
                         seq_len,
                         obs_dim,
-                        n_envs,
                     )
                     obs_t = obs_t.to(device)
                     mask_t = mask_t.to(device)
