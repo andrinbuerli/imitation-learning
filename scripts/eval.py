@@ -101,7 +101,8 @@ def main(cfg: DictConfig) -> None:
         model.to(cfg.eval.device)
         seq_len = int(model.hparams.cfg.train.seq_len)
         obs_dim = int(model.hparams.cfg.data.obs_dim)
-        action_mode = model.hparams.cfg.train.action_mode
+
+        print(f"Model: {model.net}")
     else:
         onnx_path = to_absolute_path(cfg.model.onnx_path)
         policy = OnnxPolicy(onnx_path)
@@ -142,13 +143,14 @@ def main(cfg: DictConfig) -> None:
                     action = pred[:, valid_len - 1].cpu().numpy()
             else:
                 action = np.array([policy.predict(x[None]) for x in obs])
-
             raw_obs, reward, done, _ = _step_env(env, action)
             obs = _extract_obs(raw_obs, cfg.env.obs_key)
             obs = np.asarray(obs, dtype=np.float32)
             if model is not None:
                 obs_history.append(obs)
 
+            total_reward += reward
+            
             if done.any():
                 done_indices = np.where(done)[0]
                 for idx in done_indices:
@@ -157,7 +159,6 @@ def main(cfg: DictConfig) -> None:
                 if len(episode_rewards) >= cfg.eval.n_episodes:
                     break
 
-            total_reward += reward
             steps += 1
             if cfg.eval.max_steps is not None and steps >= cfg.eval.max_steps:
                 break

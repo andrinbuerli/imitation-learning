@@ -16,3 +16,6 @@ outputs/
 logs*/
 Starter/
 data/clean/
+data/data_ILTutorialEnv_windows_x86_64/
+*.exe
+*.pck
