@@ -103,24 +103,29 @@ class EvalCallback(pl.Callback):
         pl_module.eval()
         episode_rewards = []
         with torch.no_grad():
-            for _ in range(int(np.ceil(self.n_episodes / 16))):
+            while len(episode_rewards) < self.n_episodes:
                 raw_obs = self._reset_env()
                 obs = self._extract_obs(raw_obs)
                 obs = np.asarray(obs, dtype=np.float32)
                 if obs.shape[-1] != obs_dim:
                     raise ValueError(f"Expected obs shape ({obs_dim},), got {obs.shape}.")
 
+                n_envs = int(obs.shape[0]) if obs.ndim > 1 else 1
                 obs_history: Deque[np.ndarray] = deque(maxlen=seq_len)
                 obs_history.append(obs)
-                done = np.array([False]).repeat(16)
-                total_reward = np.array([0.0]).repeat(16)
+                done = np.array(False).repeat(n_envs)
+                total_reward = np.array(0.0).repeat(n_envs)
                 steps = 0
 
                 pbar = tqdm(total=self.max_steps if self.max_steps is not None else None)
-                
-                episode_rewards = []
-                while len(episode_rewards) < self.n_episodes:
-                    obs_t, mask_t, valid_len = self._build_window(obs_history, seq_len, obs_dim)
+
+                while not done.all():
+                    obs_t, mask_t, valid_len = self._build_window(
+                        obs_history,
+                        seq_len,
+                        obs_dim,
+                        n_envs,
+                    )
                     obs_t = obs_t.to(device)
                     mask_t = mask_t.to(device)
 
@@ -133,22 +138,19 @@ class EvalCallback(pl.Callback):
                     obs_history.append(obs)
 
                     total_reward += reward
-                    
+
                     if done.any():
                         done_indices = np.where(done)[0]
                         for idx in done_indices:
                             episode_rewards.append(total_reward[idx])
                             total_reward[idx] = 0.0
-                            
                         if len(episode_rewards) >= self.n_episodes:
                             break
-                    
+
                     steps += 1
                     pbar.update(1)
                     if self.max_steps is not None and steps >= self.max_steps:
                         break
-
-                episode_rewards.extend(total_reward.tolist())
         pl_module.train()
 
         mean_reward = float(np.mean(episode_rewards)) if episode_rewards else float("nan")
