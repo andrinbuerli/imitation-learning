@@ -1,6 +1,6 @@
 # Imitation Learning for the Godot Bonus Unit
 
-This repository contains a lightweight PyTorch/Lightning implementation for behavior cloning for a Godot RL environment from the [Hugging Face Deep RL course bonus lesson](https://huggingface.co/learn/deep-rl-course/en/unitbonus5/getting-started). The project compares classical results achieved with Generative Adversarial Imitation Learning ([GAIL](https://arxiv.org/abs/1805.01954)) with explicit Behavioral Cloning (EBC). In the future also Implicit Behavioral Cloning ([IBC](https://arxiv.org/pdf/2109.00137)) using a energy-based model will be implemented.
+This repository contains a lightweight PyTorch/Lightning implementation for behavior cloning for a Godot RL environment from the [Hugging Face Deep RL course bonus lesson](https://huggingface.co/learn/deep-rl-course/en/unitbonus5/getting-started). The project compares classical results achieved with Generative Adversarial Imitation Learning ([GAIL](https://arxiv.org/abs/1606.03476)) with explicit Behavioral Cloning (EBC) using state and sequence based modelling. In the future also Implicit Behavioral Cloning ([IBC](https://arxiv.org/pdf/2109.00137)) using a energy-based model will be implemented.
 
 ## Environment
 The environment features a robot that needs to:
